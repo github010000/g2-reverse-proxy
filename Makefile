@@ -4,7 +4,7 @@ VERSION := $(shell cat VERSION.txt)
 
 build:
 	@echo "\n\033[1;33m+ $@\033[0m"
-	@env GOOS=linux GOARCH=amd64 go build -v -o out/g2-reverse-proxy cmd/zmon_metering_collector/zmon_metering_collector.go
+	@env GOOS=linux GOARCH=amd64 go build -v -o out/g2-reverse-proxy cmd/g2_reverse_proxy/g2_reverse_proxy.go
 
 #---
 
