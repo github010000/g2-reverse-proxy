@@ -9,7 +9,7 @@ import (
 
 type config struct {
 	Env         string
-	ListenPort  int
+	ListenPort  string
 	OpsgenieURL string
 }
 
@@ -21,7 +21,7 @@ func LoadConfig() error {
 	if err := loadEnvAsStr(&_config.Env, "ENV", true); err != nil {
 		return err
 	}
-	if err := loadEnvAsInt(&_config.ListenPort, "LISTEN_PORT", true); err != nil {
+	if err := loadEnvAsStr(&_config.ListenPort, "LISTEN_PORT", true); err != nil {
 		return err
 	}
 	if err := loadEnvAsStr(&_config.OpsgenieURL, "OPSGENIE_URL", true); err != nil {
@@ -69,4 +69,8 @@ func IsProd() bool {
 
 func OpsgenieURL() string {
 	return _config.OpsgenieURL
+}
+
+func ListenPort() string {
+	return _config.ListenPort
 }

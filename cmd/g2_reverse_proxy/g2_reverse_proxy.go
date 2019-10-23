@@ -1,32 +1,19 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"net/http/httputil"
-	"net/url"
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
-	"time"
+		"bytes"
+		"encoding/json"
+		"fmt"
+		"io/ioutil"
+		"net/http"
+		"net/http/httputil"
+		"net/url"
+		"os"
 
-	"github.com/cnpst/g2-reverse-proxy/common/config"
-	"github.com/cnpst/g2-reverse-proxy/common/log"
-	"github.com/pkg/errors"
+		"github.com/cnpst/g2-reverse-proxy/common/config"
+		"github.com/cnpst/g2-reverse-proxy/common/log"
+		"github.com/pkg/errors"
 )
-
-/*
-	Structs
-*/
-
-type requestPayloadStruct struct {
-	ProxyCondition string `json:"proxy_condition"`
-}
 
 func setUp() error {
 	if err := config.LoadConfig(); err != nil {
@@ -40,62 +27,21 @@ func setUp() error {
 	return nil
 }
 
-
-/*
-	Utilities
-*/
-
-// Get env var or default
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
-}
-
-/*
-	Getters
-*/
-
 // Get the port to listen on
 func getListenAddress() string {
-	port := getEnv("PORT", "8080")
+	port := config.ListenPort()
 	return ":" + port
 }
 
 // Get the url for a given proxy condition
-func getProxyUrl(proxyConditionRaw string) string {
-	default_condtion_url := getEnv("URL","https://api.opsgenie.com/v2/alerts")
-	return default_condtion_url
+func getProxyUrl() string {
+	url := config.OpsgenieURL()
+	return url
 }
-
-/*
-	Logging
-*/
-
-// Log the typeform payload and redirect url
-func logRequestPayload(requestionPayload requestPayloadStruct, proxyUrl string) {
-	log.Printf("proxy_condition: %s, proxy_url: %s\n", requestionPayload.ProxyCondition, proxyUrl)
-}
-
-// Log the env variables required for a reverse proxy
-func logSetup() {
-	a_condtion_url := os.Getenv("A_CONDITION_URL")
-	b_condtion_url := os.Getenv("B_CONDITION_URL")
-	default_condtion_url := os.Getenv("DEFAULT_CONDITION_URL")
-
-	log.Printf("Server will run on: %s\n", getListenAddress())
-	log.Printf("Redirecting to A url: %s\n", a_condtion_url)
-	log.Printf("Redirecting to B url: %s\n", b_condtion_url)
-	log.Printf("Redirecting to Default url: %s\n", default_condtion_url)
-}
-
-/*
-	Reverse Proxy Logic
-*/
 
 // Serve a reverse proxy for a given url
 func serveReverseProxy(target string, res http.ResponseWriter, req *http.Request) {
+	log.Info("Input Request Header Host: %s\n", req.Header.Get("Host"))
 	// parse the url
 	url, _ := url.Parse(target)
 
@@ -107,20 +53,26 @@ func serveReverseProxy(target string, res http.ResponseWriter, req *http.Request
 	req.URL.Scheme = url.Scheme
 	req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
 	req.Host = url.Host
+	log.Info("Proxy Request Header Host: %s\n", req.Header.Get("Host"))
 
 	// Note that ServeHttp is non blocking and uses a go routine under the hood
 	proxy.ServeHTTP(res, req)
 }
 
-// Get a json decoder for a given requests body
-func requestBodyDecoder(request *http.Request) *json.Decoder {
+
+func requestBodyToByte(request *http.Request) []byte {
 	// Read body to buffer
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		log.Printf("Error reading body: %v", err)
+		log.Errorf("Error reading body: %v", err)
 		panic(err)
 	}
-
+	return body
+}
+// Get a json decoder for a given requests body
+func requestBodyDecoder(request *http.Request) *json.Decoder {
+	// Read body to buffer
+	body:= requestBodyToByte(request)
 	// Because go lang is a pain in the ass if you read the body then any susequent calls
 	// are unable to read the body again....
 	request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
@@ -128,33 +80,14 @@ func requestBodyDecoder(request *http.Request) *json.Decoder {
 	return json.NewDecoder(ioutil.NopCloser(bytes.NewBuffer(body)))
 }
 
-// Parse the requests body
-func parseRequestBody(request *http.Request) requestPayloadStruct {
-	decoder := requestBodyDecoder(request)
-
-	var requestPayload requestPayloadStruct
-	err := decoder.Decode(&requestPayload)
-
-	if err != nil {
-		panic(err)
-	}
-
-	return requestPayload
-}
-
 // Given a request send it to the appropriate url
 func handleRequestAndRedirect(res http.ResponseWriter, req *http.Request) {
-	requestPayload := parseRequestBody(req)
-	url := getProxyUrl(requestPayload.ProxyCondition)
-	log.Printf("Redirecting to URL: %s\n", url)
-	logRequestPayload(requestPayload, url)
-
+	log.Info("Input Request Body: %s\n", string(requestBodyToByte(req)))
+	url := getProxyUrl()
+	log.Info("Redirecting to URL: %s\n", url)
 	serveReverseProxy(url, res, req)
+	log.Info("Proxy Request Body: %s\n", string(requestBodyToByte(req)))
 }
-
-/*
-	Entry
-*/
 
 func main() {
 	if err := setUp(); err != nil {
