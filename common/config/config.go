@@ -8,8 +8,9 @@ import (
 )
 
 type config struct {
-	Env                  			string
-	G2ReverseProxyListenerEndpoint 	string
+	Env         string
+	ListenPort  int
+	OpsgenieURL string
 }
 
 var _config *config
@@ -20,10 +21,12 @@ func LoadConfig() error {
 	if err := loadEnvAsStr(&_config.Env, "ENV", true); err != nil {
 		return err
 	}
-	if err := loadEnvAsStr(&_config.G2ReverseProxyListenerEndpoint, "ZMON_LISTENER_ENDPOINT", true); err != nil {
+	if err := loadEnvAsInt(&_config.ListenPort, "LISTEN_PORT", true); err != nil {
 		return err
 	}
-
+	if err := loadEnvAsStr(&_config.OpsgenieURL, "OPSGENIE_URL", true); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -64,6 +67,6 @@ func IsProd() bool {
 	return !IsDev()
 }
 
-func G2ReverseProxyListenerEndpoint() string {
-	return _config.G2ReverseProxyListenerEndpoint
+func OpsgenieURL() string {
+	return _config.OpsgenieURL
 }
