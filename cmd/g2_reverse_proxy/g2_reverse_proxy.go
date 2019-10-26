@@ -1,18 +1,18 @@
 package main
 
 import (
-		"bytes"
-		"encoding/json"
-		"fmt"
-		"io/ioutil"
-		"net/http"
-		"net/http/httputil"
-		"net/url"
-		"os"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
 
-		"github.com/cnpst/g2-reverse-proxy/common/config"
-		"github.com/cnpst/g2-reverse-proxy/common/log"
-		"github.com/pkg/errors"
+	"github.com/cnpst/g2-reverse-proxy/common/config"
+	"github.com/cnpst/g2-reverse-proxy/common/log"
+	"github.com/pkg/errors"
 )
 
 func setUp() error {
@@ -41,7 +41,7 @@ func getProxyUrl() string {
 
 // Serve a reverse proxy for a given url
 func serveReverseProxy(target string, res http.ResponseWriter, req *http.Request) {
-	log.Info("Input Request Header Host: %s\n", req.Header.Get("Host"))
+	log.Info("Proxy Target[: ", target, "]")
 	// parse the url
 	url, _ := url.Parse(target)
 
@@ -53,26 +53,25 @@ func serveReverseProxy(target string, res http.ResponseWriter, req *http.Request
 	req.URL.Scheme = url.Scheme
 	req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
 	req.Host = url.Host
-	log.Info("Proxy Request Header Host: %s\n", req.Header.Get("Host"))
 
 	// Note that ServeHttp is non blocking and uses a go routine under the hood
 	proxy.ServeHTTP(res, req)
 }
 
-
 func requestBodyToByte(request *http.Request) []byte {
 	// Read body to buffer
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		log.Errorf("Error reading body: %v", err)
+		log.Errorf("Error reading body:, %v", err)
 		panic(err)
 	}
 	return body
 }
+
 // Get a json decoder for a given requests body
 func requestBodyDecoder(request *http.Request) *json.Decoder {
 	// Read body to buffer
-	body:= requestBodyToByte(request)
+	body := requestBodyToByte(request)
 	// Because go lang is a pain in the ass if you read the body then any susequent calls
 	// are unable to read the body again....
 	request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
@@ -82,11 +81,10 @@ func requestBodyDecoder(request *http.Request) *json.Decoder {
 
 // Given a request send it to the appropriate url
 func handleRequestAndRedirect(res http.ResponseWriter, req *http.Request) {
-	log.Info("Input Request Body: %s\n", string(requestBodyToByte(req)))
+	log.Info("Input Request Body:[", ioutil.NopCloser(bytes.NewBuffer(requestBodyToByte(req))), "]")
 	url := getProxyUrl()
-	log.Info("Redirecting to URL: %s\n", url)
+	log.Info("Redirecting to URL:[", url, "]")
 	serveReverseProxy(url, res, req)
-	log.Info("Proxy Request Body: %s\n", string(requestBodyToByte(req)))
 }
 
 func main() {
