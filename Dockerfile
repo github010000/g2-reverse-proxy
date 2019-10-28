@@ -1,6 +1,6 @@
 FROM alpine:3.10.3
 
-RUN mkdir -p /app/bin && mkdir -p /app/logs
-ADD ./out/g2-reverse-proxy /app/bin
+RUN mkdir /app
+ADD ./out/g2-reverse-proxy /app/
 
-CMD /app/bin/g2-reverse-proxy
+CMD /app/g2-reverse-proxy

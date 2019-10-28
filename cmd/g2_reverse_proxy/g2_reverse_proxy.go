@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -35,56 +34,39 @@ func getListenAddress() string {
 
 // Get the url for a given proxy condition
 func getProxyUrl() string {
-	url := config.OpsgenieURL()
-	return url
+	proxyUrl := config.OpsgenieURL()
+	return proxyUrl
 }
 
-// Serve a reverse proxy for a given url
-func serveReverseProxy(target string, res http.ResponseWriter, req *http.Request) {
-	log.Info("Proxy Target[: ", target, "]")
+// Given a request send it to the appropriate url
+func handleRequestAndRedirect(res http.ResponseWriter, req *http.Request) {
+	//Input request body Logging
+	if req.Body != nil {
+		body, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			log.Errorf("Error reading body:[", err, "]")
+			panic(err)
+		}
+		logBody := ioutil.NopCloser(bytes.NewBuffer(body))
+		runBody := ioutil.NopCloser(bytes.NewBuffer(body))
+		logBodyBuf, err := ioutil.ReadAll(logBody)
+		log.Info("Input Request Body:[", string(logBodyBuf), "]")
+		req.Body = runBody
+	}
+	// proxy url
+	proxyUrl := getProxyUrl()
+	log.Info("Proxy to URL:[", proxyUrl, "]")
 	// parse the url
-	url, _ := url.Parse(target)
-
+	url, _ := url.Parse(proxyUrl)
 	// create the reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(url)
-
 	// Update the headers to allow for SSL redirection
 	req.URL.Host = url.Host
 	req.URL.Scheme = url.Scheme
 	req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
 	req.Host = url.Host
-
 	// Note that ServeHttp is non blocking and uses a go routine under the hood
 	proxy.ServeHTTP(res, req)
-}
-
-func requestBodyToByte(request *http.Request) []byte {
-	// Read body to buffer
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Errorf("Error reading body:, %v", err)
-		panic(err)
-	}
-	return body
-}
-
-// Get a json decoder for a given requests body
-func requestBodyDecoder(request *http.Request) *json.Decoder {
-	// Read body to buffer
-	body := requestBodyToByte(request)
-	// Because go lang is a pain in the ass if you read the body then any susequent calls
-	// are unable to read the body again....
-	request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
-
-	return json.NewDecoder(ioutil.NopCloser(bytes.NewBuffer(body)))
-}
-
-// Given a request send it to the appropriate url
-func handleRequestAndRedirect(res http.ResponseWriter, req *http.Request) {
-	log.Info("Input Request Body:[", ioutil.NopCloser(bytes.NewBuffer(requestBodyToByte(req))), "]")
-	url := getProxyUrl()
-	log.Info("Redirecting to URL:[", url, "]")
-	serveReverseProxy(url, res, req)
 }
 
 func main() {
@@ -93,9 +75,7 @@ func main() {
 		os.Exit(1)
 		return
 	}
-
 	log.Info("g2 reverse proxy started")
-
 	// start server
 	http.HandleFunc("/", handleRequestAndRedirect)
 	if err := http.ListenAndServe(getListenAddress(), nil); err != nil {
