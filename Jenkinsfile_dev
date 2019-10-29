@@ -15,7 +15,7 @@ podTemplate(label:label,
       containerTemplate(name: 'kubectl', image: 'lachlanevenson/k8s-kubectl', ttyEnabled: true, command: 'cat')
     ],
     volumes: [
-        configMapVolume(mountPath: '/var/config/ymkim', configMapName: 'g2-reverse-proxy-kube-config')
+        configMapVolume(mountPath: '/var/config/zmon', configMapName: 'zmon-dev-kube-config')
     ]) {
 
     node(label) {
@@ -34,7 +34,7 @@ podTemplate(label:label,
 
         stage('DEPLOY') {
             container('kubectl') {
-                withEnv(['KUBECONFIG=/var/config/ymkim/kube-config-zmon-dev.yml']) {
+                withEnv(['KUBECONFIG=/var/config/zmon/kube-config-zmon-dev.yml']) {
                     withFolderProperties {
                         yaml.update file: 'k8s/deploy-dev.yaml', update: ['.spec.template.spec.imagePullSecrets[0].name': "${env.IMAGE_PULL_SECRET}"]
                         sh 'cat k8s/deploy-dev.yaml'
