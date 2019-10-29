@@ -4,7 +4,7 @@ def label = "jenkins-${UUID.randomUUID().toString()}"
 // Retort 모듈 설명
 // https://myshare.skcc.com/display/SKCOP/Pipeline+-+Retort+Module+API
 
-def DOCKER_IMAGE = 'g2-reverse-proxy'
+def DOCKER_IMAGE = 'g2_reverse_proxy'
 def K8S_NAMESPACE = 'ymkim'
 def VERSION = '1.1.0'
 
