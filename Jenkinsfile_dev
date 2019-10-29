@@ -1,0 +1,50 @@
+@Library('retort-lib') _
+def label = "jenkins-${UUID.randomUUID().toString()}"
+
+// Retort 모듈 설명
+// https://myshare.skcc.com/display/SKCOP/Pipeline+-+Retort+Module+API
+
+def DOCKER_IMAGE = 'g2-reverse-proxy'
+def K8S_NAMESPACE = 'ymkim'
+def VERSION = '1.1.0'
+
+podTemplate(label:label,
+    containers: [
+      containerTemplate(name: 'docker', image: 'docker', ttyEnabled: true, command: 'cat', envVars: [
+        envVar(key: 'DOCKER_HOST', value: 'tcp://jenkins-dind-service:2375 ')]),
+      containerTemplate(name: 'kubectl', image: 'lachlanevenson/k8s-kubectl', ttyEnabled: true, command: 'cat')
+    ],
+    volumes: [
+        configMapVolume(mountPath: '/var/config/ymkim', configMapName: 'g2-reverse-proxy-kube-config')
+    ]) {
+
+    node(label) {
+        stage('SOURCE CHECKOUT') {
+            def repo = checkout scm
+        }
+
+        stage('BUILD DOCKER IMAGE') {
+            container('docker') {
+                withFolderProperties{
+                    dockerCmd.build tag: "${env.DOCKER_REGISTRY}/${DOCKER_IMAGE}:${VERSION}", options: "--network=host"
+                    dockerCmd.push registry: env.DOCKER_REGISTRY, imageName: DOCKER_IMAGE, imageVersion: VERSION, credentialsId:"ibmcloud_token"
+                }
+            }
+        }
+
+        stage('DEPLOY') {
+            container('kubectl') {
+                withEnv(['KUBECONFIG=/var/config/ymkim/kube-config-zmon-dev.yml']) {
+                    withFolderProperties {
+                        yaml.update file: 'k8s/deploy-dev.yaml', update: ['.spec.template.spec.imagePullSecrets[0].name': "${env.IMAGE_PULL_SECRET}"]
+                        sh 'cat k8s/deploy-dev.yaml'
+
+                        kubeCmd.apply file: 'k8s/deploy-dev.yaml', namespace: K8S_NAMESPACE, wait: 600
+                        kubeCmd.apply file: 'k8s/service.yaml', namespace: K8S_NAMESPACE
+                        kubeCmd.apply file: 'k8s/ingress-dev.yaml', namespace: K8S_NAMESPACE
+                    }
+                }
+            }
+        }
+    }
+}

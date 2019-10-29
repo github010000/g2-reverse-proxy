@@ -1,0 +1,15 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  generation: 1
+  name: g2-reverse-proxy
+  namespace: zmon-ops
+spec:
+  rules:
+    - host: dev-g2-reverse-proxy.zmon.club
+      http:
+        paths:
+          - backend:
+              serviceName: g2-reverse-proxy
+              servicePort: 80
+            path: /
