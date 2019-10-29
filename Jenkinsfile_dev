@@ -10,6 +10,7 @@ def VERSION = '1.1.0'
 
 podTemplate(label:label,
     containers: [
+      containerTemplate(name: 'go', image: 'golang', ttyEnabled: true, command: 'cat'),
       containerTemplate(name: 'docker', image: 'docker', ttyEnabled: true, command: 'cat', envVars: [
         envVar(key: 'DOCKER_HOST', value: 'tcp://jenkins-dind-service:2375 ')]),
       containerTemplate(name: 'kubectl', image: 'lachlanevenson/k8s-kubectl', ttyEnabled: true, command: 'cat')
@@ -21,6 +22,12 @@ podTemplate(label:label,
     node(label) {
         stage('SOURCE CHECKOUT') {
             def repo = checkout scm
+        }
+
+        stage('Make GO BUILD'){
+          container('go') {
+            sh "@env GOOS=linux GOARCH=amd64 go build -v -o out/g2-reverse-proxy cmd/g2_reverse_proxy/g2_reverse_proxy.go"
+          }
         }
 
         stage('BUILD DOCKER IMAGE') {
