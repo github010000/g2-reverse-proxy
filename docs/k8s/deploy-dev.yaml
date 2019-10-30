@@ -5,7 +5,7 @@ metadata:
   labels:
     app: g2-reverse-proxy
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: g2-reverse-proxy
