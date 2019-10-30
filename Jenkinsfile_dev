@@ -43,7 +43,6 @@ podTemplate(label:label,
             container('kubectl') {
                 withEnv(['KUBECONFIG=/var/config/zmon/kube-config-zmon-dev.yml']) {
                     withFolderProperties {
-                        yaml.update file: 'docs/k8s/deploy-dev.yaml', update: ['.spec.template.spec.imagePullSecrets[0].name': "${env.IMAGE_PULL_SECRET}"]
                         sh 'cat docs/k8s/deploy-dev.yaml'
 
                         kubeCmd.apply file: 'docs/k8s/deploy-dev.yaml', namespace: K8S_NAMESPACE, wait: 600

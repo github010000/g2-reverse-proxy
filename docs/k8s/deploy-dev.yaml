@@ -28,5 +28,3 @@ spec:
             - name: OPSGENIE_URL
               value: "https://api.opsgenie.com/v2/alerts"
       restartPolicy: Always
-      imagePullSecrets:
-        - name: IMAGE_PULL_SECRET
