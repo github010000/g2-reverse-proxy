@@ -1,0 +1,30 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: g2-reverse-proxy
+  labels:
+    app: g2-reverse-proxy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: g2-reverse-proxy
+  template:
+    metadata:
+      labels:
+        app: g2-reverse-proxy
+    spec:
+      containers:
+        - name: g2-reverse-proxy
+          image: registry.au-syd.bluemix.net/zmon/g2-reverse-proxy:1.1.0
+          ports:
+            - containerPort: 80
+          imagePullPolicy: Always
+          env:
+            - name: ENV
+              value: "prd"
+            - name: LISTEN_PORT
+              value: "8080"
+            - name: OPSGENIE_URL
+              value: "https://api.opsgenie.com/v2/alerts"
+      restartPolicy: Always

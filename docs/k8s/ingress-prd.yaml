@@ -1,0 +1,20 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    ingress.bluemix.net/ALB-ID: private-cr934015ddda66464289887531c1af39df-alb1
+  name: g2-reverse-proxy
+  namespace: g2ops
+spec:
+  tls:
+    - hosts:
+        - g2-reverse-proxy.cloudzcp.io
+      secretName: cloudzcp-io-cert
+  rules:
+    - host: g2-reverse-proxy.cloudzcp.io
+      http:
+        paths:
+          - backend:
+              serviceName: g2-reverse-proxy
+              servicePort: 80
+            path: /
