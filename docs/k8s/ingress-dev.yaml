@@ -3,7 +3,7 @@ kind: Ingress
 metadata:
   generation: 1
   name: g2-reverse-proxy
-  namespace: ymkim
+  namespace: g2-ops
 spec:
   rules:
     - host: dev-g2-reverse-proxy.zmon.club
